@@ -6,6 +6,8 @@
 
 <nav>
 	<a href="{base}/aoudio-test">aoudio-test</a>
+	<a href="{base}/">back</a>
+
 </nav>
 
 {@render children()}
