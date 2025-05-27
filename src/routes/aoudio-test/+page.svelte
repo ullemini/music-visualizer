@@ -2,7 +2,9 @@
     import { onMount } from "svelte";
     import { Segment } from '@skeletonlabs/skeleton-svelte'; 
     import { FileUpload } from '@skeletonlabs/skeleton-svelte';
-
+    import { Switch } from '@skeletonlabs/skeleton-svelte';
+    
+    // aoudio settup
     const audioContext = new AudioContext();
     let canvasDOM:HTMLCanvasElement;
     let audioElement:HTMLAudioElement;
@@ -12,6 +14,7 @@
     let bufferLength:number = analyser.frequencyBinCount;
     let canvasContext:CanvasRenderingContext2D ;
     let frequencydata:Uint8Array<ArrayBuffer> = new Uint8Array(bufferLength);
+    //settings setttup
     const VisulizerStyle = {
         bar:"bar",
         wave:"wave",
@@ -20,10 +23,13 @@
     const fftSize = [
         "32", "64", "128", "256", "512", "1024", "2048", "4096", "8192", "16384","32768"
     ]
+    let currentsong = $state("aoudio/I-LIKE-LOUD-THINGS.mp3")
     let currentVisulizerStyle:string = $state("bar")
     let currentfftSize:string = $state("2048")
     let showAllffsise = $state(false)
     let showfileupload = $state(true)
+    let showSettings = $state(true)
+    
     onMount(()=>{ 
         
         canvasContext = canvasDOM.getContext("2d")
@@ -31,7 +37,7 @@
         let aoudioSorce = audioContext.createMediaElementSource(audioElement);
         aoudioSorce.connect(analyser)
         analyser.connect(audioContext.destination);
-        audioElement.src = "aoudio/I-LIKE-LOUD-THINGS.mp3"
+        audioElement.src = currentsong
         function draw(){
             const drawVisual = requestAnimationFrame(()=>draw());
             
@@ -63,7 +69,7 @@
         return `rgb(${barHeight + 100} ${i*6}  ${ Math.floor((x+2)/2)})`;
         
     }
-
+    //visulisation styles >>> https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API
     function visulizerStyleBar(width:number,height:number){
             analyser.getByteFrequencyData(frequencydata);
             const barWidth = (width / bufferLength) * 2.5;
@@ -102,84 +108,112 @@
         canvasContext.lineTo(width, height / 2);
         canvasContext.stroke();
     }
+    //settings cange
     function changeffsise(zise:string) { 
         analyser.fftSize = parseInt(zise,10)
         bufferLength = analyser.frequencyBinCount 
         frequencydata = new Uint8Array(bufferLength);
         currentfftSize = zise
     }   
-
-    function changesong(){
-        audioElement.src = "aoudio/I-LIKE-LOUD-THINGS.mp3"
-    }
+    //file upload haneler  >>>> https://stackoverflow.com/questions/33446206/how-to-load-a-file-into-a-html5-audio-tag
     function HadelFileUpload(files){
-        
+        var blob = window.URL || window.webkitURL;
+        if (!blob) {
+            console.log('Your browser does not support Blob URLs :('); 
+        }
+        console.log(files)
+        currentsong = blob.createObjectURL(files[0])
+        audioElement.src = currentsong
     }
+
 </script>
 
-<main>
-    <div id="controll-pannel" >
-        
-        <div>
-        <Segment value={currentVisulizerStyle} onValueChange={(e) => (currentVisulizerStyle = e.value)}>
-            {#each Object.entries(VisulizerStyle) as [key,value]}
-                <Segment.Item value={value}>{value}</Segment.Item>
+
+
+
+<aside id="controll-pannel" >
+    <div id="show-settings-switch" ><Switch name="show-settings" checked={showSettings} onCheckedChange={(e) => (showSettings = e.checked)}></Switch></div>
+
+    {#if showSettings}
+    <div id="style-settigs">
+    <Segment value={currentVisulizerStyle} onValueChange={(e) => (currentVisulizerStyle = e.value)}>
+        {#each Object.entries(VisulizerStyle) as [key,value]}
+            <Segment.Item value={value}>{value}</Segment.Item>
+        {/each}
+    </Segment>
+    </div>
+    <Switch name="show-fileupload"  checked={showfileupload} onCheckedChange={(e)=>(showfileupload = e.checked)}></Switch>
+
+    <div class="ff-settings">
+        <div class=flex-column>   
+        <Segment orientation="vertical" value={currentfftSize} onValueChange={(e) => (changeffsise(e.value))}>
+            <button onclick={()=>{console.log(showAllffsise=!showAllffsise);showAllffsise!=showAllffsise}}>Cange ff-sise</button>
+            {#each fftSize as sise}
+                {#if showAllffsise || sise == currentfftSize}
+                <Segment.Item value={sise}>
+                    {sise}
+                </Segment.Item>
+                {/if}
             {/each}
-        </Segment >
-        </div>
-        <div class="ff-settings" >
-            <div class=flex-column>   
-            <Segment orientation="vertical" value={currentfftSize} onValueChange={(e) => (changeffsise(e.value))}>
-                <button onclick={()=>{console.log(showAllffsise=!showAllffsise);showAllffsise!=showAllffsise}}>Cange ff-sise</button>
-                {#each fftSize as sise}
-                    {#if showAllffsise || sise == currentfftSize}
-                    <Segment.Item value={sise}>
-                        {sise}
-                    </Segment.Item>
-                    {/if}
-                {/each}
-            </Segment>
-            </div>
-        </div>
-    </div>
-    <div id="visulizer-div" >
-        <canvas id="maincanvas" width="1800" height="150" bind:this={canvasDOM}><p>visulizer</p></canvas>
-    </div>
-    <audio src="aoudio\wise-mystical-magical-wizard.mp3" id="mainAudio" controls loop bind:this={audioElement}></audio>
-</main>
-{#if showfileupload}
-    <div id="file-upoad-div">
-        <FileUpload 
-        maxFiles={50}  
-        allowDrop 
-        name="audio upload" 
-        accept="audio/*" 
-        onFileAccept={(details)=>{HadelFileUpload(details.files)}} 
-        onFileReject={console.error} 
-        classes="w-full" 
-        ></FileUpload>
+        </Segment>
         
+        </div>
+
     </div>
+    {/if}
+</aside>
+
+
+<main id="visulizer-div" >
+    <canvas id="maincanvas" width="1800" height="150" bind:this={canvasDOM}><p>Visulizer is displayed here</p></canvas>
+</main>
+<audio src={currentsong} id="mainAudio" controls={showSettings} loop bind:this={audioElement}></audio>
+
+{#if showfileupload && showSettings}
+<div id="file-upoad-div">
+    <FileUpload 
+    maxFiles={1}  
+    allowDrop 
+    name="audio upload" 
+    accept="audio/*" 
+    onFileAccept={(details)=>{HadelFileUpload(details.files)}} 
+    onFileReject={console.error} 
+    classes="w-full" 
+    ></FileUpload>
+</div>
 {/if}
 
 <style>
-
     
     canvas{
         width: 100%;
         height: 100%;
     }
     audio{
-        width: 100vw;
+        width: 100%;
     }
     #visulizer-div{
         width: 100vw;
-        height: 80vh;
+        height: 85vh;
        
     }
     #controll-pannel{
         display: flex;
+        position: fixed;
+        top: 50px;
+        left: 10px;
+        
     }
+    #show-settings-switch{
+        top:15px;
+        left:15px;
+        position: fixed;
+    }
+    #style-settigs{
+        margin-right: 15px;
+        
+    }
+
     .ff-settings{
         z-index: 1;
         position: fixed;
