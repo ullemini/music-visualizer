@@ -1,12 +1,22 @@
 <script lang="ts">
-    import { onMount } from "svelte";
+
+
+    import { onDestroy, onMount } from "svelte";
     import { Segment } from '@skeletonlabs/skeleton-svelte'; 
     import { FileUpload } from '@skeletonlabs/skeleton-svelte';
     import { Switch } from '@skeletonlabs/skeleton-svelte';
     
-    // aoudio settup
+    async function bugprvetion(){
+        await new Promise(window)
+    } 
+    bugprvetion()
+    // aoudio settup and default settings for aoudip
+    
+    
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
     const audioContext = new AudioContext();
     let canvasDOM:HTMLCanvasElement;
+    let drawloop:number
     let audioElement:HTMLAudioElement;
     let analyser:AnalyserNode = audioContext.createAnalyser();
     analyser.fftSize = 2048;
@@ -23,24 +33,29 @@
     const fftSize = [
         "32", "64", "128", "256", "512", "1024", "2048", "4096", "8192", "16384","32768"
     ]
+    //default settingas
     let currentsong = $state("aoudio/I-LIKE-LOUD-THINGS.mp3")
     let currentVisulizerStyle:string = $state("bar")
     let currentfftSize:string = $state("2048")
+    let waveColur = $state("rgb(250 250 250)") 
     let showAllffsise = $state(false)
     let showfileupload = $state(true)
     let showSettings = $state(true)
-    
+    // setup or un-setup
+    let brake_loop = false
     onMount(()=>{ 
-        
         canvasContext = canvasDOM.getContext("2d")
-        
+        //connect aoudio
         let aoudioSorce = audioContext.createMediaElementSource(audioElement);
         aoudioSorce.connect(analyser)
         analyser.connect(audioContext.destination);
         audioElement.src = currentsong
+        // draw looop
         function draw(){
-            const drawVisual = requestAnimationFrame(()=>draw());
-            
+            if(brake_loop){
+                return
+            }
+            drawloop = requestAnimationFrame(()=>draw());
             
             let canvas_width = 1800
             let canvas_height = 150
@@ -53,14 +68,28 @@
                     break;
                 case VisulizerStyle.bar: 
                     visulizerStyleBar(canvas_width,canvas_height); 
-                    break;
-                
+                    break;   
             }
         }
         
        draw();
 
+       window.addEventListener("keypress",handelkyebinds)
     })
+    onDestroy(()=>{
+        brake_loop = true
+        window.removeEventListener("keypress",handelkyebinds)
+    })
+    // event listeners
+    function handelkyebinds(event:KeyboardEvent){
+        switch (event.key){
+            case "p": 
+                if(audioElement.paused) audioElement.play(); 
+                else audioElement.pause();
+                break;
+        }
+    }
+    //Beta or internal 
     let colur_style = ""
     function color_formulas(barHeight:number,i:number,x:number){
         switch (colur_style){
@@ -86,10 +115,8 @@
     }
     function visulizerStyleWave(width:number,height:number){
         analyser.getByteTimeDomainData(frequencydata);
-        canvasContext.fillStyle = "rgb(18 18 18)";
-        canvasContext.fillRect(0, 0, width, height);
         canvasContext.lineWidth = 2;
-        canvasContext.strokeStyle =  "rgb(250 250 250)";
+        canvasContext.strokeStyle =  waveColur;
         canvasContext.beginPath();
         const sliceWidth = width / bufferLength;
         let x = 0;
@@ -116,7 +143,7 @@
         currentfftSize = zise
     }   
     //file upload haneler  >>>> https://stackoverflow.com/questions/33446206/how-to-load-a-file-into-a-html5-audio-tag
-    function HadelFileUpload(files){
+    function HadelFileUpload(files:ArrayLike<Blob>){
         var blob = window.URL || window.webkitURL;
         if (!blob) {
             console.log('Your browser does not support Blob URLs :('); 
@@ -132,7 +159,7 @@
 
 
 <aside id="controll-pannel" >
-    <div id="show-settings-switch" ><Switch name="show-settings" checked={showSettings} onCheckedChange={(e) => (showSettings = e.checked)}></Switch></div>
+    <div id="show-settings-switch" class:opacety={!showSettings} ><Switch name="show-settings" checked={showSettings} onCheckedChange={(e) => (showSettings = e.checked)}></Switch></div>
 
     {#if showSettings}
     <div id="style-settigs">
@@ -143,7 +170,11 @@
     </Segment>
     </div>
     <Switch name="show-fileupload"  checked={showfileupload} onCheckedChange={(e)=>(showfileupload = e.checked)}></Switch>
-
+    {#if currentVisulizerStyle == VisulizerStyle.wave}
+    <div  style="margin:15px;">
+        <input name="Wave colur" bind:value={waveColur} type="color">{waveColur}
+    </div>
+    {/if}
     <div class="ff-settings">
         <div class=flex-column>   
         <Segment orientation="vertical" value={currentfftSize} onValueChange={(e) => (changeffsise(e.value))}>
@@ -184,7 +215,6 @@
 {/if}
 
 <style>
-    
     canvas{
         width: 100%;
         height: 100%;
@@ -208,6 +238,13 @@
         top:15px;
         left:15px;
         position: fixed;
+        
+    }
+    #show-settings-switch:hover{
+        opacity:calc(1);
+    }
+    .opacety{
+        opacity:calc(0.2);
     }
     #style-settigs{
         margin-right: 15px;
@@ -231,5 +268,4 @@
         height: 25%;
     }
     
-
 </style>
