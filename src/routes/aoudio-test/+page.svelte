@@ -1,29 +1,20 @@
 <script lang="ts">
-
-
     import { onDestroy, onMount } from "svelte";
     import { Segment } from '@skeletonlabs/skeleton-svelte'; 
     import { FileUpload } from '@skeletonlabs/skeleton-svelte';
     import { Switch } from '@skeletonlabs/skeleton-svelte';
-    
-    async function bugprvetion(){
-        await new Promise(window)
-    } 
-    bugprvetion()
+    import { browser } from '$app/environment';    
+
     // aoudio settup and default settings for aoudip
-    
-    
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    const audioContext = new AudioContext();
+    let AudioContext
+    let audioContext:AudioContext
     let canvasDOM:HTMLCanvasElement;
     let drawloop:number
     let audioElement:HTMLAudioElement;
-    let analyser:AnalyserNode = audioContext.createAnalyser();
-    analyser.fftSize = 2048;
-    analyser.smoothingTimeConstant = 0.65;
-    let bufferLength:number = analyser.frequencyBinCount;
+    let analyser:AnalyserNode 
+    let bufferLength:number
     let canvasContext:CanvasRenderingContext2D ;
-    let frequencydata:Uint8Array<ArrayBuffer> = new Uint8Array(bufferLength);
+    let frequencydata:Uint8Array<ArrayBuffer> 
     //settings setttup
     const VisulizerStyle = {
         bar:"bar",
@@ -44,7 +35,16 @@
     // setup or un-setup
     let brake_loop = false
     onMount(()=>{ 
+        AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioContext = new AudioContext();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.65;
+        bufferLength  = analyser.frequencyBinCount;
+        frequencydata = new Uint8Array(bufferLength);
+        
         canvasContext = canvasDOM.getContext("2d")
+        
         //connect aoudio
         let aoudioSorce = audioContext.createMediaElementSource(audioElement);
         aoudioSorce.connect(analyser)
@@ -78,7 +78,8 @@
     })
     onDestroy(()=>{
         brake_loop = true
-        window.removeEventListener("keypress",handelkyebinds)
+        if (browser)
+         window.removeEventListener("keypress",handelkyebinds)
     })
     // event listeners
     function handelkyebinds(event:KeyboardEvent){
@@ -144,6 +145,7 @@
     }   
     //file upload haneler  >>>> https://stackoverflow.com/questions/33446206/how-to-load-a-file-into-a-html5-audio-tag
     function HadelFileUpload(files:ArrayLike<Blob>){
+        if(document){
         var blob = window.URL || window.webkitURL;
         if (!blob) {
             console.log('Your browser does not support Blob URLs :('); 
@@ -151,6 +153,7 @@
         console.log(files)
         currentsong = blob.createObjectURL(files[0])
         audioElement.src = currentsong
+    }
     }
 
 </script>
@@ -187,9 +190,7 @@
                 {/if}
             {/each}
         </Segment>
-        
         </div>
-
     </div>
     {/if}
 </aside>
